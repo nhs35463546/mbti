@@ -19,15 +19,20 @@ def load_data():
 try:
     df = load_data()
 
-    # 3. 사이드바 컨트롤러 (조건 선택)
-    st.sidebar.header("🔍 필터 조건 설정")
+    # 3. 메인 화면 컨트롤러 (사이드바 대신 메인 화면에 가로로 나란히 배치)
+    st.markdown("### 🔍 조회 조건 선택")
+    col_year, col_gender = st.columns(2) # 화면을 2개의 열로 분할
     
-    # 연도 선택 (가장 최신 연도인 2025년을 기본값으로 설정)
-    available_years = sorted(df['연도'].unique(), reverse=True)
-    selected_year = st.sidebar.selectbox("연도 선택", available_years, index=0)
-    
-    # 성별 선택
-    selected_gender = st.sidebar.radio("성별 선택", ["남", "여"])
+    with col_year:
+        # 연도 선택 (가장 최신 연도인 2025년을 기본값으로 설정)
+        available_years = sorted(df['연도'].unique(), reverse=True)
+        selected_year = st.selectbox("📅 연도 선택", available_years, index=0)
+        
+    with col_gender:
+        # 성별 선택
+        selected_gender = st.radio("👤 성별 선택", ["남", "여"], horizontal=True)
+
+    st.markdown("---") # 구분선
 
     # 4. 데이터 필터링 및 정렬
     filtered_df = df[(df['연도'] == selected_year) & (df['구분'] == selected_gender)]
