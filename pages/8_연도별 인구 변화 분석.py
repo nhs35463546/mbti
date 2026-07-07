@@ -6,7 +6,7 @@ import plotly.express as px
 st.set_page_config(page_title="8_안산시 기간별 인구 변화 분석", layout="wide")
 
 st.title("📉 안산시 기간별 성별 인구 변화량 분석 (1년 단위)")
-st.markdown("사용자가 지정한 연도와 그 이듬해(1년 후) 사이에서 특정 성별의 인구수가 가장 많이 변화한 동을 찾아냅니다.")
+st.markdown("사용자가 지정한 1년 기간 사이에서 특정 성별의 인구수가 가장 많이 변화한 동을 찾아냅니다.")
 
 # 2. 데이터 불러오기
 @st.cache_data
@@ -19,26 +19,27 @@ def load_data():
 try:
     df = load_data()
 
-    # 3. 사이드바 컨트롤러 (성별 및 시작 연도 선택)
+    # 3. 사이드바 컨트롤러 (성별 및 1년 단위 기간 선택 드롭다운)
     st.sidebar.header("🔍 분석 조건 설정")
     
     # 성별 선택
     selected_gender = st.sidebar.radio("성별 선택", ["남+여", "남", "여"], index=0)
     
-    # 이용 가능한 전체 연도 정렬
+    # 데이터에 존재하는 연도를 바탕으로 "시작연도 - 종료연도" 형태의 1년 단위 기간 리스트 자동 생성
     available_years = sorted(df['연도'].unique())
+    period_options = []
     
-    # 종료 연도가 존재해야 하므로, 시작 연도는 마지막 연도(2025년)를 제외한 목록만 제공
-    start_years_allowed = [y for y in available_years if (y + 1) in available_years]
+    for y in available_years:
+        if (y + 1) in available_years:
+            period_options.append(f"{y} - {y+1}")
+            
+    # 1년 단위 기간 선택 드롭다운 생성 (기본값은 예시로 들어주신 "2018 - 2019")
+    default_idx = period_options.index("2018 - 2019") if "2018 - 2019" in period_options else 0
+    selected_period = st.sidebar.selectbox("비교 기간 선택", period_options, index=default_idx)
     
-    # 기본값으로 2018년 선택 설정
-    default_start_idx = start_years_allowed.index(2018) if 2018 in start_years_allowed else 0
-    start_year = st.sidebar.selectbox("시작 연도 선택", start_years_allowed, index=default_start_idx)
-    
-    # 종료 연도는 시작 연도 + 1년으로 강제 고정 및 화면 표시
-    end_year = start_year + 1
-    st.sidebar.disable_element = True # 안내용 텍스트 표시
-    st.sidebar.info(f"💡 비교 종료 연도는 자동으로 **{end_year}년**으로 설정됩니다 (1년 차이 고정).")
+    # 선택된 텍스트에서 시작 연도와 종료 연도 분리 추출
+    start_year = int(selected_period.split(" - ")[0])
+    end_year = int(selected_period.split(" - ")[1])
 
     # 4. 두 연도 데이터 필터링 및 변화량 계산
     df_start = df[(df['연도'] == start_year) & (df['구분'] == selected_gender)][['행정구역', '동이름', '인구수']].rename(columns={'인구수': f'인구_{start_year}'})
@@ -61,12 +62,12 @@ try:
         direction = "증가 📈" if top_1['변화량'] > 0 else "감소 📉"
         
         st.info(
-            f"💡 **{start_year}년 ~ {end_year}년** 사이 **[{selected_gender}]** 인구 변화가 가장 컸던 곳은 "
+            f"💡 **{selected_period}** 기간 사이 **[{selected_gender}]** 인구 변화가 가장 컸던 곳은 "
             f"**{top_1['동이름']}**입니다. (총 **{abs(int(top_1['변화량'])):,}명** {direction})"
         )
         
         # 6. 변화량이 가장 큰 상위 7개 동 그래프 시각화
-        st.subheader(f"📊 {start_year}년 ➡️ {end_year}년 인구 변화량 TOP 7 동 (성별: {selected_gender})")
+        st.subheader(f"📊 {selected_period} 인구 변화량 TOP 7 동 (성별: {selected_gender})")
         st.markdown(f"* {start_year}년 대비 {end_year}년에 인구가 가장 급격하게 유입(증가)했거나 유출(감소)한 상위 7개 동입니다.")
         
         top7_df = sorted_df.head(7).copy()
