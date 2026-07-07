@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from streamlit_plotly_events import plotly_events  # 필요 시 추가 (기본 plotly로 충분)
 
 st.set_page_config(page_title="국가별 4대 지표 분석", page_icon="🧠", layout="wide")
 
