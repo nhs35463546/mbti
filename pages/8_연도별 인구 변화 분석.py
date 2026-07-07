@@ -5,7 +5,7 @@ import plotly.express as px
 # 1. 페이지 설정
 st.set_page_config(page_title="8_안산시 기간별 인구 변화 분석", layout="wide")
 
-st.title("📉 안산시 기간별 성별 인구 변화량 분석 (1년 단위)")
+st.title("📉 안산시 기간별 성별 인구 변화량 분석")
 st.markdown("사용자가 지정한 1년 기간 사이에서 특정 성별의 인구수가 가장 많이 변화한 동을 찾아냅니다.")
 
 # 2. 데이터 불러오기
@@ -19,24 +19,28 @@ def load_data():
 try:
     df = load_data()
 
-    # 3. 사이드바 컨트롤러 (성별 및 1년 단위 기간 선택 드롭다운)
-    st.sidebar.header("🔍 분석 조건 설정")
+    # 3. 메인 화면 컨트롤러 (사이드바 대신 가운데 상단 배치)
+    st.markdown("### 🔍 분석 조건 설정")
+    col_period, col_gender = st.columns(2)  # 화면을 2개의 열로 분할
     
-    # 성별 선택
-    selected_gender = st.sidebar.radio("성별 선택", ["남+여", "남", "여"], index=0)
-    
-    # 데이터에 존재하는 연도를 바탕으로 "시작연도 - 종료연도" 형태의 1년 단위 기간 리스트 자동 생성
-    available_years = sorted(df['연도'].unique())
-    period_options = []
-    
-    for y in available_years:
-        if (y + 1) in available_years:
-            period_options.append(f"{y} - {y+1}")
-            
-    # 1년 단위 기간 선택 드롭다운 생성 (기본값은 예시로 들어주신 "2018 - 2019")
-    default_idx = period_options.index("2018 - 2019") if "2018 - 2019" in period_options else 0
-    selected_period = st.sidebar.selectbox("비교 기간 선택", period_options, index=default_idx)
-    
+    with col_period:
+        # 2016-2017부터 2024-2025까지 드롭다운 목록 생성
+        available_years = sorted(df['연도'].unique())
+        period_options = []
+        for y in available_years:
+            if (y + 1) in available_years:
+                period_options.append(f"{y} - {y+1}")
+        
+        # 목록이 잘 생성되도록 확인하고, 기본값은 "2018 - 2019"로 설정
+        default_idx = period_options.index("2018 - 2019") if "2018 - 2019" in period_options else 0
+        selected_period = st.selectbox("📅 비교 기간 선택", period_options, index=default_idx)
+        
+    with col_gender:
+        # 성별 선택 라디오 버튼을 가로형태(horizontal)로 배치
+        selected_gender = st.radio("👤 성별 선택", ["남+여", "남", "여"], index=0, horizontal=True)
+
+    st.markdown("---") # 구분선
+
     # 선택된 텍스트에서 시작 연도와 종료 연도 분리 추출
     start_year = int(selected_period.split(" - ")[0])
     end_year = int(selected_period.split(" - ")[1])
