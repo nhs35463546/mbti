@@ -53,7 +53,7 @@ try:
         fig = go.Figure(data=[go.Pie(
             labels=labels, 
             values=values, 
-            hole=0.3,  # 도넛 모양 스타일 (원형을 원하시면 0으로 설정)
+            hole=0,  # 도넛 모양 스타일 (원형을 원하시면 0으로 설정)
             marker=dict(colors=colors),
             textinfo='label+percent',
             hoverinfo='label+percent'
