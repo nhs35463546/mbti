@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+# 1. 페이지 설정 (탭 이름을 '6_안산시 성별 인구 상위 TOP 7'로 지정)
+st.set_page_config(page_title="6_안산시 성별 인구 상위 TOP 7", layout="wide")
+
 st.title("📊 안산시 동별 성별 인구수 TOP 7 분석")
 st.markdown("2016년부터 2025년까지의 데이터를 바탕으로, 성별에 따른 인구 상위 7개 동을 보여줍니다.")
 
