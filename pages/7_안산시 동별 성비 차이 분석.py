@@ -6,7 +6,7 @@ import plotly.express as px
 st.set_page_config(page_title="7_안산시 동별 성비 차이 분석", layout="wide")
 
 st.title("⚖️ 안산시 동별 성비(남녀 인구) 차이 분석")
-st.markdown("전체 인구수 대비 남녀 인구수의 격차(절댓값 차이 및 비율)가 가장 큰 곳과 작은 곳을 분석합니다.")
+st.markdown("전체 인구수 대비 남녀 인구수의 격차(절댓값 차이 및 비율)가 가장 큰 곳과 작은 곳을 그래프로 비교 분석합니다.")
 
 # 2. 데이터 불러오기 및 성비 차이 계산 변환
 @st.cache_data
@@ -30,7 +30,7 @@ def load_and_process_sex_ratio():
 try:
     data_df = load_and_process_sex_ratio()
 
-    # 3. [최상단 배치] 조회 조건 설정 (연도 선택 후 동 선택)
+    # 3. [최상단 배치] 조회 조건 설정
     st.markdown("### 🔍 조회 조건 설정")
     col_year_sel, col_dong_sel = st.columns(2) # 화면을 가로로 2개 분할
     
@@ -45,12 +45,52 @@ try:
     with col_dong_sel:
         # 선택된 연도 내에 존재하는 동 리스트 정렬 후 드롭다운 제공
         dong_list = sorted(year_df['동이름'].unique())
-        selected_dong = st.selectbox("🏘️ 조회할 동 선택", dong_list)
+        selected_dong = st.selectbox("🏘️ 개별 조회할 동 선택", dong_list)
 
     st.markdown("---") # 구분선
 
-    # 4. 개별 동 성비 격차 상세 조회 결과 출력
-    st.subheader(f"📈 {selected_year}년 {selected_dong} 성비 격차 상세 결과")
+    # 4. [신규 추가] 연도 선택 시 나타나는 성비 차이 극과 극 그래프 (상위 5 vs 하위 5)
+    st.subheader(f"📊 {selected_year}년 전체 인구 대비 성비 격차 비율(%) 비교 그래프")
+    st.markdown("* 비율(%)이 높을수록 남녀 불균형이 심한 동이며, 낮을수록 남녀 성비가 균등한 동입니다.")
+
+    # 격차 비율 기준으로 전체 동 정렬
+    sorted_df = year_df.sort_values(by='성비_격차비율(%)', ascending=False)
+    
+    # 그래프 시각화를 위해 상위 5개(가장 큰 곳)와 하위 5개(가장 작은 곳) 추출 및 결합
+    largest_5 = sorted_df.head(5).copy()
+    largest_5['구분'] = '격차 가장 큰 곳 (불균형)'
+    
+    smallest_5 = sorted_df.tail(5).iloc[::-1].copy() # 가장 균등한 곳부터 역순 정렬
+    smallest_5['구분'] = '격차 가장 작은 곳 (균등)'
+    
+    plot_comparison_df = pd.concat([largest_5, smallest_5])
+
+    # Plotly 그룹형 막대그래프 생성
+    fig_comp = px.bar(
+        plot_comparison_df,
+        x='동이름',
+        y='성비_격차비율(%)',
+        color='구분',
+        barmode='group',
+        text_auto='.2f',  # 소수점 둘째자리까지 막대 위에 표시
+        labels={'동이름': '행정동', '성비_격차비율(%)': '성비 격차 비율 (%)', '구분': '그룹 분류'},
+        color_discrete_map={'격차 가장 큰 곳 (불균형)': '#d62728', '격차 가장 작은 곳 (균등)': '#2ca02c'} # 불균형은 빨강, 균등은 초록
+    )
+    
+    fig_comp.update_layout(
+        xaxis_title="행정동",
+        yaxis_title="성비 격차 비율 (%)",
+        height=450,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1) # 범례를 상단 가로형으로 배치
+    )
+    fig_comp.update_traces(textposition='outside', cliponaxis=False)
+    
+    st.plotly_chart(fig_comp, use_container_width=True)
+
+    st.markdown("---")
+
+    # 5. 개별 동 성비 격차 상세 조회 결과 출력
+    st.subheader(f"🏘️ {selected_year}년 [{selected_dong}] 성비 격차 상세 결과")
     
     # 선택된 동 데이터 추출
     dong_data = year_df[year_df['동이름'] == selected_dong].iloc[0]
@@ -70,7 +110,7 @@ try:
     st.info(f"💡 **{selected_dong}**은(는) **{selected_year}년** 기준 **{status}** 상태이며, 전체 인구수 대비 약 **{ratio_val:.2f}%**의 성별 편차가 존재합니다.")
 
     # 선택한 동의 연도별 성비 변화 트렌드 라인 차트
-    st.caption(f"📊 {selected_dong}의 연도별 남녀 인구 추이 트렌드 (2016년 ~ 2025년)")
+    st.caption(f"📈 {selected_dong}의 연도별 남녀 인구 추이 트렌드 (2016년 ~ 2025년)")
     dong_trend = data_df[data_df['동이름'] == selected_dong].sort_values(by='연도')
     
     plot_data = []
@@ -79,7 +119,7 @@ try:
         plot_data.append({'연도': r['연도'], '성별': '여성 인구', '인구수': r['여']})
     plot_df = pd.DataFrame(plot_data)
     
-    fig = px.line(
+    fig_line = px.line(
         plot_df, 
         x='연도', 
         y='인구수', 
@@ -88,32 +128,8 @@ try:
         color_discrete_map={'남성 인구': '#1f77b4', '여성 인구': '#e377c2'}, # 남성 파랑, 여성 핑크
         height=300
     )
-    fig.update_layout(margin=dict(l=20, r=20, t=10, b=10))
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("---")
-
-    # 5. 하단 배치: 해당 연도의 성비 격차 비율(%) 기준 극과 극 요약 (가장 큰 동 3 vs 가장 작은 동 3)
-    st.subheader(f"📊 {selected_year}년 안산시 성비 격차 극과 극 요약 (전체 인구수 대비 비율 기준)")
-    
-    # 격차 비율 기준으로 전체 동 정렬
-    sorted_df = year_df.sort_values(by='성비_격차비율(%)', ascending=False)
-    
-    largest_3 = sorted_df.head(3)
-    smallest_3 = sorted_df.tail(3).iloc[::-1]  # 가장 균등한 곳부터 보이게 반전
-
-    col_large, col_small = st.columns(2)
-    
-    with col_large:
-        st.markdown("🔴 **성비 차이가 가장 큰 동 TOP 3** (남녀 불균형 상위)")
-        for i, (_, row) in enumerate(largest_3.iterrows(), 1):
-            gender_dominant = "남초" if row['남'] > row['여'] else "여초"
-            st.caption(f"{i}위. **{row['동이름']}** : 격차 {row['성비_격차비율(%)']:.2f}% (남 {row['남']:,}명 / 여 {row['여']:,}명 — _{gender_dominant}_)")
-
-    with col_small:
-        st.markdown("🟢 **성비 차이가 가장 작은 동 TOP 3** (남녀 비율 가장 균등)")
-        for i, (_, row) in enumerate(smallest_3.iterrows(), 1):
-            st.caption(f"{i}위. **{row['동이름']}** : 격차 {row['성비_격차비율(%)']:.2f}% (남 {row['남']:,}명 / 여 {row['여']:,}명)")
+    fig_line.update_layout(margin=dict(l=20, r=20, t=10, b=10))
+    st.plotly_chart(fig_line, use_container_width=True)
 
 except FileNotFoundError:
     st.error("🚨 `population.csv` 파일을 찾을 수 없습니다. 전처리 파일을 먼저 생성해 주세요.")
